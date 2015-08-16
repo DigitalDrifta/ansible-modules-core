@@ -68,6 +68,15 @@ options:
       - no
     default: null
     aliases: []
+  source:
+    description:
+      - Specify a source to install the feature from
+    required: false
+    choices: 
+      - {driveletter}:\sources\sxs
+      - \\{IP}\Share\sources\sxs
+    default: null
+    aliases: []
 author: 
     - "Paul Durivage (@angstwad)"
     - "Trond Hindenes (@trondhindenes)"

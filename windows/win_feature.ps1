@@ -47,40 +47,52 @@ Elseif (!$params.state) {
 If ($params.restart) {
     $restart = $params.restart | ConvertTo-Bool
 }
-Else
-{
+Else {
     $restart = $false
 }
 
-if ($params.include_sub_features)
-{
+If ($params.include_sub_features) {
     $includesubfeatures = $params.include_sub_features | ConvertTo-Bool
 }
-Else
-{
+Else {
     $includesubfeatures = $false
 }
 
-if ($params.include_management_tools)
-{
+If ($params.include_management_tools) {
     $includemanagementtools = $params.include_management_tools | ConvertTo-Bool
 }
-Else
-{
+Else {
     $includemanagementtools = $false
+}
+
+If ($params.source) {
+    $source = $params.source.ToString().ToLower()
+    If (!Test-Path $source) {
+	    Fail-Json $result "Source is $source; must be a drive (D:\sources\sxs) or network share (\\IP\Share\sources\sxs)'"
+    }
 }
 
 If ($state -eq "present") {
     try {
         If (Get-Command "Install-WindowsFeature" -ErrorAction SilentlyContinue) {
-            $featureresult = Install-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -IncludeManagementTools:$includemanagementtools -ErrorAction SilentlyContinue
-        }
-        ElseIf (Get-Command "Add-WindowsFeature" -ErrorAction SilentlyContinue) {
-            $featureresult = Add-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -ErrorAction SilentlyContinue
-        }
-        Else {
-            Fail-Json $result "Not supported on this version of Windows"
-        }
+            if ($source) {
+		        $featureresult = Install-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -IncludeManagementTools:$includemanagementtools -Source:$source -ErrorAction SilentlyContinue
+	        }
+	        else {
+		        $featureresult = Install-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -IncludeManagementTools:$includemanagementtools -ErrorAction SilentlyContinue
+	        }
+	    }
+	    ElseIf (Get-Command "Add-WindowsFeature" -ErrorAction SilentlyContinue) {
+	        if ($source) {
+		        $featureresult = Add-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -Source:$source -ErrorAction SilentlyContinue
+	        }
+            else {
+	            $featureresult = Add-WindowsFeature -Name $name -Restart:$restart -IncludeAllSubFeature:$includesubfeatures -ErrorAction SilentlyContinue
+	        }
+	    }
+	    Else {
+	        Fail-Json $result "Not supported on this version of Windows"
+	    }
     }
     catch {
         Fail-Json $result $_.Exception.Message
@@ -107,8 +119,7 @@ ElseIf ($state -eq "absent") {
 # each role/feature that is installed/removed
 $installed_features = @()
 #$featureresult.featureresult is filled if anything was changed
-If ($featureresult.FeatureResult)
-{
+If ($featureresult.FeatureResult) {
     ForEach ($item in $featureresult.FeatureResult) {
         $message = @()
         ForEach ($msg in $item.Message) {
